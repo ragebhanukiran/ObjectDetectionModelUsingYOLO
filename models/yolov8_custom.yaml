@@ -1,0 +1,41 @@
+# Number of classes
+nc: 3
+
+# Model scaling factors for depth and width
+depth_multiple: 0.33  # scales layers like C2f repeats
+width_multiple: 0.50  # scales number of channels in Conv layers
+
+# ----------------------------------------
+# Backbone: Feature extraction layers
+# ----------------------------------------
+backbone:
+  [
+    [-1, 1, Conv, [64, 3, 2]],          # Layer 0: Conv -> 64 channels, stride 2
+    [-1, 1, Conv, [128, 3, 2]],         # Layer 1: Conv -> 128 channels, stride 2
+    [-1, 3, C2f, [128]],                # Layer 2: C2f -> 3 repeats, 128 channels
+    [-1, 1, Dropout, [0.1]],            # Layer 3: Dropout (10%)
+    [-1, 1, Conv, [256, 3, 2]],         # Layer 4: Conv -> 256 channels, downsample
+    [-1, 6, C2f, [256]],                # Layer 5: C2f -> 6 repeats, 256 channels
+    [-1, 1, Dropout, [0.1]],            # Layer 6: Dropout (10%)
+    [-1, 1, Conv, [320, 3, 1]],         # Layer 7: Conv -> 320 channels, stride 1 (no downsampling)
+  ]
+
+# ----------------------------------------
+# Head: Includes Neck + Detection layers
+# ----------------------------------------
+head:
+  [
+    # ---- Neck Begins ----
+    [-1, 1, Conv, [512, 3, 2]],         # Layer 8: Downsample + expand channels → Neck
+    [-1, 3, C2f, [512]],                # Layer 9: Feature fusion block → Neck
+    [-1, 1, Dropout, [0.1]],            # Layer 10: Regularization → Neck
+    [-1, 1, Conv, [768, 3, 1]],         # Layer 11: Increase depth without downsampling → Neck
+    # ---- Neck Ends ----
+
+    # ---- Detection Head Begins ----
+    [-1, 1, Conv, [1024, 3, 2]],        # Layer 12: Downsample for large object features
+    [-1, 3, C2f, [1024]],               # Layer 13: Final feature extraction
+    [-1, 1, Dropout, [0.1]],            # Layer 14: Dropout before SPP
+    [-1, 1, SPPF, [1024, 5]],           # Layer 15: Spatial Pyramid Pooling Fast (global context)
+    # ---- Detection Head Ends ----
+  ]

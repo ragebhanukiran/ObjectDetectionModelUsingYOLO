@@ -1,0 +1,23 @@
+2025-04-12 14:14:27,473 INFO    MainThread:20312 [wandb_setup.py:_flush():68] Current SDK version is 0.19.6
+2025-04-12 14:14:27,474 INFO    MainThread:20312 [wandb_setup.py:_flush():68] Configure stats pid to 20312
+2025-04-12 14:14:27,474 INFO    MainThread:20312 [wandb_setup.py:_flush():68] Loading settings from C:\Users\rageb\.config\wandb\settings
+2025-04-12 14:14:27,474 INFO    MainThread:20312 [wandb_setup.py:_flush():68] Loading settings from C:\Users\rageb\Desktop\new yolo model\wandb\settings
+2025-04-12 14:14:27,474 INFO    MainThread:20312 [wandb_setup.py:_flush():68] Loading settings from environment variables
+2025-04-12 14:14:27,474 INFO    MainThread:20312 [wandb_init.py:setup_run_log_directory():637] Logging user logs to C:\Users\rageb\Desktop\new yolo model\wandb\offline-run-20250412_141427-behyu6d3\logs\debug.log
+2025-04-12 14:14:27,474 INFO    MainThread:20312 [wandb_init.py:setup_run_log_directory():638] Logging internal logs to C:\Users\rageb\Desktop\new yolo model\wandb\offline-run-20250412_141427-behyu6d3\logs\debug-internal.log
+2025-04-12 14:14:27,474 INFO    MainThread:20312 [wandb_init.py:init():756] calling init triggers
+2025-04-12 14:14:27,475 INFO    MainThread:20312 [wandb_init.py:init():761] wandb.init called with sweep_config: {}
+config: {'task': 'detect', 'mode': 'train', 'model': 'yolov8s.yaml', 'data': 'datasets/data.yaml', 'epochs': 100, 'time': None, 'patience': 100, 'batch': 16, 'imgsz': 640, 'save': True, 'save_period': -1, 'cache': False, 'device': 'cuda', 'workers': 0, 'project': None, 'name': 'train3', 'exist_ok': False, 'pretrained': True, 'optimizer': 'auto', 'verbose': True, 'seed': 0, 'deterministic': True, 'single_cls': False, 'rect': False, 'cos_lr': False, 'close_mosaic': 10, 'resume': False, 'amp': True, 'fraction': 1.0, 'profile': False, 'freeze': None, 'multi_scale': False, 'overlap_mask': True, 'mask_ratio': 4, 'dropout': 0.0, 'val': True, 'split': 'val', 'save_json': False, 'save_hybrid': False, 'conf': None, 'iou': 0.7, 'max_det': 300, 'half': False, 'dnn': False, 'plots': True, 'source': None, 'vid_stride': 1, 'stream_buffer': False, 'visualize': False, 'augment': False, 'agnostic_nms': False, 'classes': None, 'retina_masks': False, 'embed': None, 'show': False, 'save_frames': False, 'save_txt': False, 'save_conf': False, 'save_crop': False, 'show_labels': True, 'show_conf': True, 'show_boxes': True, 'line_width': None, 'format': 'torchscript', 'keras': False, 'optimize': False, 'int8': False, 'dynamic': False, 'simplify': True, 'opset': None, 'workspace': 4, 'nms': False, 'lr0': 0.01, 'lrf': 0.01, 'momentum': 0.937, 'weight_decay': 0.0005, 'warmup_epochs': 3.0, 'warmup_momentum': 0.8, 'warmup_bias_lr': 0.1, 'box': 7.5, 'cls': 0.5, 'dfl': 1.5, 'pose': 12.0, 'kobj': 1.0, 'label_smoothing': 0.0, 'nbs': 64, 'hsv_h': 0.015, 'hsv_s': 0.7, 'hsv_v': 0.4, 'degrees': 0.0, 'translate': 0.1, 'scale': 0.5, 'shear': 0.0, 'perspective': 0.0, 'flipud': 0.0, 'fliplr': 0.5, 'bgr': 0.0, 'mosaic': 1.0, 'mixup': 0.0, 'copy_paste': 0.0, 'copy_paste_mode': 'flip', 'auto_augment': 'randaugment', 'erasing': 0.4, 'crop_fraction': 1.0, 'cfg': None, 'tracker': 'botsort.yaml', 'save_dir': 'runs\\detect\\train3', '_wandb': {}}
+2025-04-12 14:14:27,475 INFO    MainThread:20312 [wandb_init.py:init():789] starting backend
+2025-04-12 14:14:28,519 INFO    MainThread:20312 [wandb_init.py:init():793] sending inform_init request
+2025-04-12 14:14:28,552 INFO    MainThread:20312 [backend.py:_multiprocessing_setup():97] multiprocessing start_methods=spawn, using: spawn
+2025-04-12 14:14:28,553 INFO    MainThread:20312 [wandb_init.py:init():808] backend started and connected
+2025-04-12 14:14:28,557 INFO    MainThread:20312 [wandb_init.py:init():901] updated telemetry
+2025-04-12 14:14:28,560 INFO    MainThread:20312 [wandb_init.py:init():936] communicating run to backend with 90.0 second timeout
+2025-04-12 14:14:28,938 INFO    MainThread:20312 [wandb_init.py:init():994] starting run threads in backend
+2025-04-12 14:14:30,177 INFO    MainThread:20312 [wandb_run.py:_console_start():2385] atexit reg
+2025-04-12 14:14:30,177 INFO    MainThread:20312 [wandb_run.py:_redirect():2235] redirect: wrap_raw
+2025-04-12 14:14:30,177 INFO    MainThread:20312 [wandb_run.py:_redirect():2300] Wrapping output streams.
+2025-04-12 14:14:30,177 INFO    MainThread:20312 [wandb_run.py:_redirect():2325] Redirects installed.
+2025-04-12 14:14:30,183 INFO    MainThread:20312 [wandb_init.py:init():1036] run started, returning control to user process
+2025-04-12 15:54:53,560 WARNING MsgRouterThr:20312 [router.py:message_loop():75] message_loop has been closed
