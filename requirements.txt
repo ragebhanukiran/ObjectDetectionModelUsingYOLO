@@ -1,7 +1,9 @@
-streamlit
+streamlit==1.25.0
 streamlit-webrtc
-ultralytics>=8.2.100
-opencv-python>=4.7.0.72
-torch>=2.5.0
-numpy
+ultralytics==8.0.134
+opencv-python-headless==4.8.0.74
+torch==2.2.0
+numpy==1.26.0
 Pillow
+
+
