@@ -75,5 +75,3 @@ with tab2:
         media_stream_constraints={"video": True, "audio": False},
         async_transform=True,
     )
-
-    
