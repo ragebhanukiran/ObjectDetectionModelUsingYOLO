@@ -3,7 +3,7 @@ from ultralytics import YOLO
 
 if __name__ == "__main__":
     # Load YOLO model
-    model = YOLO("yolov8s.yaml")
+    model = YOLO("models/yolov8_custom.yaml")
 
     # Train the model
     results = model.train(
