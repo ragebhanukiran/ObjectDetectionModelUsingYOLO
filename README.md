@@ -1,87 +1,89 @@
 # Object Detection Model Using YOLOv8
 
-A YOLOv8-based vehicle detector for identifying three vehicle categories—`car`, `emv`, and `htv`—in still images and live webcam video. The repository includes training/evaluation scripts, trained weights, generated metric plots, and a Streamlit application for interactive inference.
+A YOLOv8-based vehicle detector for identifying `car`, `emv`, and `htv` in images and live webcam video. The repository includes training, inference, evaluation, visualizations, trained weights, and a Streamlit interface.
 
-> **Repository status:** The dataset referenced by the scripts (`datasets/data.yaml` and its image/label directories) is not committed. To retrain or reproduce evaluation, provide a YOLO-format dataset at those paths or update the paths in the scripts.
+> **Dataset note:** `datasets/data.yaml` and the dataset image/label directories are referenced by the scripts but are not included in this repository. Provide the dataset or update the paths before training or evaluation.
 
 ## End-to-end flow
 
 ```mermaid
 flowchart TD
-    A[YOLO-labeled dataset<br/>images + labels + data.yaml] --> B[scripts/train.py]
-    B --> C[YOLOv8 detector<br/>models/yolov8_custom.yaml]
-    C --> D[100 epochs<br/>640px images, batch 16, CUDA]
-    D --> E[runs/detect/train/weights/best.pt]
+    A[YOLO dataset<br/>images + labels + data.yaml] --> B[scripts/train.py]
+    B --> C[YOLOv8 model<br/>models/yolov8_custom.yaml]
+    C --> D[Training<br/>100 epochs, 640px, batch 16, CUDA]
+    D --> E[best.pt checkpoint]
 
-    E --> F{Inference interface}
-    F --> G[app.py<br/>Streamlit image upload]
-    F --> H[app.py<br/>WebRTC live webcam]
-    F --> I[scripts/detect.py<br/>OpenCV image/webcam]
-
+    E --> F{Inference}
+    F --> G[Streamlit image upload]
+    F --> H[Streamlit WebRTC webcam]
+    F --> I[OpenCV image/webcam]
     G --> J[Preprocess image/frame]
     H --> J
     I --> J
     J --> K[YOLO forward pass]
-    K --> L[Confidence filtering<br/>default app threshold: 0.40]
-    L --> M[Bounding boxes + class + confidence]
-    M --> N[OpenCV annotations / displayed result]
+    K --> L[Confidence filtering]
+    L --> M[Boxes + class + confidence]
+    M --> N[Annotated output]
 
-    A --> O[Validation images + labels]
+    A --> O[Validation images and labels]
     E --> P[Ultralytics model.val]
     O --> P
-    O --> Q[metrics/plots.py or plots/plot.py]
-    E --> Q
-    P --> R[mAP50 and mAP50-95]
+    E --> Q[Custom metric scripts]
+    O --> Q
+    P --> R[mAP@0.5<br/>mAP@0.5:0.95]
     Q --> S[Precision, recall, F1,<br/>PR curves, confusion matrix]
-    D --> T[runs/detect/train/results.csv]
-    T --> U[Loss, metric, and learning-rate plots]
 ```
 
-The model predicts bounding boxes, class IDs, and confidence scores. Inference maps IDs to `['car', 'emv', 'htv']`, filters low-confidence detections, draws boxes with OpenCV, and displays the result.
+## How YOLOv8 works
+
+YOLO—**You Only Look Once**—is a single-stage object detector. Instead of first proposing regions and then classifying each region, it processes the image in one neural-network forward pass and directly predicts candidate boxes, objectness/class scores, and class labels.
+
+This project uses a YOLOv8-style architecture with:
+
+1. **Backbone:** convolutional and `C2f` blocks extract visual features at progressively smaller spatial resolutions.
+2. **SPPF block:** spatial pyramid pooling aggregates context at multiple receptive-field sizes.
+3. **Neck:** upsampling and concatenation fuse coarse semantic features with finer spatial features.
+4. **Multi-scale detection head:** P3, P4, and P5 heads detect objects at different sizes, which is useful when vehicles are near or far from the camera.
+5. **Post-processing:** confidence filtering and non-maximum suppression remove weak and duplicate detections before the boxes are returned.
+
+The model resizes/letterboxes an input image, runs the forward pass, decodes predictions into pixel coordinates, applies post-processing, and returns bounding boxes, class IDs, and confidence values. In this repository, class IDs are mapped as `0=car`, `1=emv`, and `2=htv`.
+
+## YOLOv8 compared with common alternatives
+
+| Detector family | Main approach | Strengths | Trade-offs compared with YOLOv8 | Fit for this project |
+|---|---|---|---|---|
+| **YOLOv8** | One-stage, multi-scale detection | Strong speed/accuracy balance, simple Ultralytics API, easy training and deployment | Accuracy can depend heavily on data quality and threshold tuning | **Chosen:** supports both training and near-real-time webcam inference with little application code |
+| **YOLOv5** | One-stage YOLO detector | Mature ecosystem, fast, widely deployed | Older architecture and tooling than YOLOv8; generally less convenient for newer experiments | A reasonable baseline, but YOLOv8 offers a newer API and architecture |
+| **YOLOv7** | One-stage detector optimized for speed and accuracy | Very strong historical real-time performance | Less unified modern training/export workflow than Ultralytics YOLOv8 | Suitable for benchmarking, but adds migration and maintenance cost |
+| **Faster R-CNN** | Two-stage region proposal plus classification | Often strong localization accuracy and useful for precision-focused workloads | Slower and more computationally expensive, especially for live video | Better when latency is less important than maximum localization quality |
+| **SSD** | One-stage, multi-scale detector | Lightweight and comparatively simple | Often weaker accuracy, especially for small or crowded objects | Useful on constrained hardware, but less attractive for this vehicle detector |
+| **RetinaNet** | One-stage detector with focal loss | Handles class imbalance well and can provide strong accuracy | Usually more complex/slower to deploy for this use case | Useful when imbalance is dominant, but YOLOv8 is simpler operationally |
+| **DETR / RT-DETR** | Transformer-based set prediction | Global context and reduced reliance on traditional NMS in DETR-style designs; RT-DETR targets real-time use | Higher architectural complexity and potentially greater training/deployment cost | Worth evaluating when crowded scenes or global context become important |
+
+These are general trade-offs rather than a universal ranking. A fair comparison requires the same dataset split, input size, hardware, augmentation policy, confidence/IoU settings, and evaluation procedure. YOLOv8 was selected here primarily for its practical speed, mature Python interface, multi-scale detection, and straightforward Streamlit/OpenCV integration.
 
 ## Repository layout
 
 ```text
-app.py                         Streamlit image-upload and WebRTC webcam application
-scripts/
-  train.py                     YOLO training entry point
-  test.py                      Ultralytics validation entry point
-  detect.py                    OpenCV command-line image/webcam inference
-models/
-  yolov8_custom.yaml           Three-class YOLOv8 architecture definition
-metrics/
-  plots.py                     Metric/training-curve generation utility
-  *.png                        Generated evaluation plots
-plots/
-  plot.py                      Extended evaluation and plotting utility
-  results.csv                  Per-epoch Ultralytics training history
-  *.png, *.jpg                 Curves, confusion matrices, and sample predictions
-runs/detect/train/
-  args.yaml                    Arguments recorded for the saved training run
-  results.csv                  Training history
-  weights/best.pt              Best trained checkpoint used by app.py
-  weights/last.pt              Final checkpoint
+app.py                         Streamlit image-upload and WebRTC webcam app
+scripts/train.py               Training entry point
+scripts/test.py                Ultralytics validation entry point
+scripts/detect.py              OpenCV image/webcam inference
+models/yolov8_custom.yaml      Three-class YOLOv8 architecture
+metrics/plots.py               Metric and training-curve generation
+plots/plot.py                  Extended evaluation utility
+plots/results.csv              Archived per-epoch training history
+runs/detect/train/weights/     best.pt and last.pt checkpoints
+metrics/, plots/               Curves, confusion matrices, and sample images
 wandb/                         Offline experiment-tracking artifacts
-.devcontainer/                 Codespaces/dev-container configuration
-requirements.txt               Python dependencies
-packages.txt                   System packages needed by OpenCV/GUI libraries
-runtime.txt                    Python runtime declaration
+requirements.txt              Python dependencies
+packages.txt                  Linux system packages
+runtime.txt                   Python runtime declaration
 ```
-
-## Why YOLOv8 and these design decisions?
-
-- **One-stage detection:** YOLO predicts object locations and classes in one forward pass, making it suitable for near-real-time webcam inference.
-- **Multi-scale detection:** `models/yolov8_custom.yaml` has P3, P4, and P5 detection heads for vehicles at different sizes.
-- **Three explicit classes:** The model uses `nc: 3`; the application supports `car`, `emv`, and `htv`.
-- **640-pixel input:** A practical compromise between localization detail and inference cost.
-- **GPU training:** The training entry point uses CUDA, batch size 16, and the recorded run uses mixed precision. Set `device="cpu"` when CUDA is unavailable.
-- **Confidence threshold of 0.4 in the app:** This reduces visible false positives. Evaluation uses a separate threshold (`0.25`) to retain more candidates when generating plots.
-- **Cached Streamlit model:** `@st.cache_resource` avoids reloading the checkpoint on every Streamlit rerun.
-- **Two inference interfaces:** `scripts/detect.py` supports local OpenCV usage; `app.py` supports browser uploads and WebRTC webcam input.
 
 ## Environment setup
 
-The project targets Python 3.10 in `runtime.txt`; the dev container uses Python 3.11.
+The declared runtime is Python 3.10. The dev container uses Python 3.11.
 
 ```bash
 python -m venv .venv
@@ -91,18 +93,18 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-On Linux, install the system libraries listed in `packages.txt`:
+On Linux, install the packages listed in `packages.txt`:
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y libglib2.0-0 libsm6 libxrender1 libxext6
 ```
 
-The main dependencies are Streamlit, Streamlit-WebRTC, Ultralytics `8.0.134`, PyTorch `2.2.0`, OpenCV, NumPy, and Pillow. A CUDA-compatible PyTorch installation may be needed separately for GPU training.
+Important dependencies include Streamlit, Streamlit-WebRTC, Ultralytics `8.0.134`, PyTorch `2.2.0`, OpenCV, NumPy, and Pillow. Install a CUDA-compatible PyTorch build separately when GPU training is required.
 
 ## Dataset format
 
-The scripts expect Ultralytics/YOLO detection data. Create `datasets/data.yaml` similar to:
+Create `datasets/data.yaml` in Ultralytics format:
 
 ```yaml
 path: /absolute/path/to/datasets
@@ -115,27 +117,26 @@ names:
   2: htv
 ```
 
-Each image needs a matching text file in its `labels` directory. Each line uses normalized YOLO coordinates:
+Every image needs a matching text file in its `labels` directory. Each label line contains normalized YOLO coordinates:
 
 ```text
 <class_id> <center_x> <center_y> <width> <height>
 ```
 
-Class IDs must agree with the application order: `0=car`, `1=emv`, and `2=htv`.
+## Training
 
-## How training works
-
-`scripts/train.py` constructs a model from `models/yolov8_custom.yaml` and calls Ultralytics training with 100 epochs, 640 × 640 images, batch size 16, CUDA, validation enabled, `workers=0`, automatic optimizer selection, and YOLO augmentations such as mosaic, horizontal flip, scale, HSV changes, and RandAugment defaults.
+`scripts/train.py` uses `models/yolov8_custom.yaml` and trains with 100 epochs, 640 × 640 images, batch size 16, CUDA, validation, automatic optimizer selection, and standard YOLO augmentations such as mosaic, horizontal flip, scale, HSV changes, and RandAugment defaults.
 
 ```bash
 python scripts/train.py
 ```
 
-The run writes checkpoints and logs under `runs/detect/train/`. `best.pt` is selected by Ultralytics using validation performance; `last.pt` is the final-epoch checkpoint. The script also exports a TorchScript model.
+Outputs are written to `runs/detect/train/`. The main checkpoints are:
 
-### Reproducibility note
+- `best.pt`: checkpoint selected using validation performance; use this for inference.
+- `last.pt`: checkpoint from the final epoch.
 
-The committed training script uses the custom YAML architecture, while `runs/detect/train/args.yaml` records `model: yolov8s.yaml` and `pretrained: true` for the archived run. Treat the archived metrics as experiment artifacts and do not expect an identical fresh run without the original dataset, version, hardware, and configuration.
+The script also exports a TorchScript model. The archived `runs/detect/train/args.yaml` records a previous run using `yolov8s.yaml` and pretrained weights, so a new run may not exactly reproduce the committed metrics.
 
 ## Inference
 
@@ -145,17 +146,15 @@ The committed training script uses the custom YAML architecture, while `runs/det
 streamlit run app.py
 ```
 
-Open the displayed URL, normally `http://localhost:8501`. The **Image Upload** tab accepts JPG, JPEG, and PNG files. The **Live Detection** tab uses the browser webcam after permission is granted. Both paths call the cached model and annotate detections.
+The application loads `runs/detect/train/weights/best.pt`, accepts JPG/JPEG/PNG uploads, and provides a WebRTC webcam tab. The application uses a confidence threshold of `0.4` and caches the model with `@st.cache_resource`.
 
-The application expects `runs/detect/train/weights/best.pt`. If the checkpoint is moved, update `load_model()` in `app.py`.
-
-### OpenCV command-line workflow
+### OpenCV application
 
 ```bash
 python scripts/detect.py
 ```
 
-Choose `1` for webcam detection, `2` for an image path, or `q` to exit. Press `q` in the webcam window or click the OpenCV window to stop live detection. The script currently uses Windows-style checkpoint paths; on Linux/macOS, change it to `runs/detect/train/weights/best.pt`.
+Choose `1` for webcam detection, `2` for image detection, or `q` to exit. On Linux/macOS, change the script's Windows-style checkpoint path to `runs/detect/train/weights/best.pt`.
 
 ### Programmatic inference
 
@@ -173,33 +172,29 @@ for result in results:
         print(class_id, confidence, (x1, y1, x2, y2))
 ```
 
-## Evaluation and metrics
+## Metrics and evaluation
 
-### Standard Ultralytics metrics
+`scripts/test.py` calls `model.val(data="datasets/data.yaml")` and reports mAP values. The key metrics are:
 
-`scripts/test.py` calls `model.val(data="datasets/data.yaml")` and prints the main detection metrics:
+- **Precision:** `TP / (TP + FP)`. Of all predicted objects, how many are correct. It measures false-alarm rate.
+- **Recall:** `TP / (TP + FN)`. Of all ground-truth objects, how many were found. It measures missed detections.
+- **IoU:** intersection area divided by union area between a predicted and ground-truth box.
+- **AP:** area under a class-specific precision–recall curve as the confidence threshold varies.
+- **mAP@0.5:** mean AP across classes using IoU ≥ 0.50.
+- **mAP@0.5:0.95:** mean AP across IoU thresholds 0.50 through 0.95 in increments of 0.05. It is stricter and rewards tighter boxes.
+- **F1:** `2 × precision × recall / (precision + recall)`, a balance between precision and recall.
 
-- **Precision:** `TP / (TP + FP)`. The fraction of predicted detections that are correct; high precision means fewer false alarms.
-- **Recall:** `TP / (TP + FN)`. The fraction of labeled objects found; high recall means fewer missed vehicles.
-- **IoU:** `area(prediction ∩ ground truth) / area(prediction ∪ ground truth)`. Measures bounding-box overlap.
-- **AP:** The area under a precision–recall curve for one class as the confidence threshold changes.
-- **mAP@0.5:** Mean AP across classes using IoU ≥ 0.50. This is relatively forgiving about localization.
-- **mAP@0.5:0.95:** Mean AP across IoU thresholds 0.50, 0.55, ..., 0.95 and classes. This is stricter and rewards tighter boxes.
-- **F1 score:** `2 × precision × recall / (precision + recall)`, balancing false positives and false negatives.
-
-A detection is generally a true positive only when its class is correct and its box reaches the required IoU with an unmatched ground-truth box. Duplicate detections and background detections are false positives; missed labels are false negatives.
-
-Run validation with:
+A detection is a true positive when the class is correct and its box overlaps an unmatched ground-truth box above the selected IoU threshold. Unmatched predictions are false positives; unmatched labels are false negatives.
 
 ```bash
 python scripts/test.py
 ```
 
-> `scripts/test.py` currently references `runs\\detect\\train18\\weights\\best.pt`, while the committed checkpoint is under `runs/detect/train/weights/best.pt`. Update the path before running it, and ensure `datasets/data.yaml` exists.
+> `scripts/test.py` references `runs\\detect\\train18\\weights\\best.pt`, but the committed checkpoint is in `runs/detect/train/weights/best.pt`. Update the path first.
 
 ### Archived results
 
-The archived `plots/results.csv` contains 100 epochs. The recorded run reaches approximately:
+The archived `plots/results.csv` contains 100 epochs. Its approximate results are:
 
 - Best mAP@0.5: **0.8666** at epoch 42
 - Best mAP@0.5:0.95: **0.6480** at epoch 67
@@ -208,23 +203,13 @@ The archived `plots/results.csv` contains 100 epochs. The recorded run reaches a
 - Epoch-100 mAP@0.5: **0.8486**
 - Epoch-100 mAP@0.5:0.95: **0.6374**
 
-These describe the archived run, not a guarantee for a retrained model. The difference between best and final values is why `best.pt` should normally be used instead of `last.pt`.
+These values describe the archived experiment and are not a guarantee for a retrained model.
 
-### Training curves and custom evaluation
+### Custom plots
 
-`metrics/plots.py` and `plots/plot.py` produce or organize:
+`metrics/plots.py` and `plots/plot.py` generate loss, learning-rate, precision, recall, F1, PR, and confusion-matrix plots. They use `conf=0.25`, convert YOLO normalized `xywh` labels to pixel `xyxy` boxes, sort predictions by confidence, and greedily match predictions to ground truth at IoU ≥ 0.5.
 
-- `losses_plot.png`: training and validation box, classification, and distribution-focal losses.
-- `metrics_plot.png`: precision, recall, mAP@0.5, and mAP@0.5:0.95 by epoch.
-- `learning_rates_plot.png`: learning-rate parameter groups over time.
-- `P_curve.png`, `R_curve.png`, and `F1_curve.png`: precision, recall, and F1 curves.
-- `PR_curve.png`: precision versus recall; larger area indicates better ranking quality.
-- `confusion_matrix_normalized.png`: normalized class outcomes.
-- `train_batch*.jpg` and `val_batch*_labels/pred.jpg`: qualitative training and validation checks.
-
-The custom evaluators convert normalized YOLO `xywh` labels to pixel `xyxy` boxes, run inference at `conf=0.25`, sort predictions by confidence, greedily match each prediction to the highest-IoU unmatched ground-truth box, and use IoU ≥ 0.5 for a match. Unmatched predictions become false positives and unmatched labels become false negatives. The scripts then write plots and log mean precision/recall/F1 to TensorBoard under `runs/eval`.
-
-Update the hard-coded validation paths before running either utility:
+Update their hard-coded validation paths before running:
 
 ```bash
 python metrics/plots.py
@@ -232,21 +217,16 @@ python metrics/plots.py
 python plots/plot.py
 ```
 
-> **Evaluation caveat:** both custom plotting scripts set `bg_idx = num_classes - 1`, which is `2` for this three-class model—the same ID as `htv`. They also build confusion-matrix labels using only `range(num_classes)`. Background can therefore be conflated with `htv` or omitted. For formal reporting, use Ultralytics validation or fix the scripts to use a separate background ID (`num_classes`) and include it in the labels.
+> **Caveat:** the custom scripts use `bg_idx = num_classes - 1`, which equals `2` and conflicts with the `htv` class. Use Ultralytics validation for formal reporting, or fix the scripts to use background ID `num_classes` and include that label in the confusion matrix.
 
-## Experiment tracking
+## Limitations
 
-The `wandb/` directory contains offline Weights & Biases artifacts, including curves, sample images, metadata, and environment requirements. These document experiments locally and are not required to run the Streamlit application.
-
-## Known limitations and improvements
-
-- The dataset and `data.yaml` are not included, so training is not immediately reproducible from a clean clone.
-- Several utilities contain absolute Windows paths; replace them with configurable paths or command-line arguments.
-- `scripts/test.py` points to `train18`, while the checked-in weights are in `train`.
-- Class names are duplicated across files; prefer `model.names` or one shared configuration.
-- Correct the custom background handling before using its confusion matrix as a formal report.
-- Tune confidence and IoU/NMS thresholds on validation data based on whether missed vehicles or false alarms are more costly.
+- The dataset is not included, so training is not immediately reproducible from a clean clone.
+- Several evaluation utilities contain absolute Windows paths.
+- `scripts/test.py` uses a stale `train18` checkpoint path.
+- Class names are duplicated across files; a shared configuration or `model.names` would reduce class-order drift.
+- Confidence and IoU/NMS thresholds should be tuned on validation data according to whether false alarms or missed vehicles are more costly.
 
 ## License
 
-No license file is currently included. Add an appropriate license before redistributing the code, weights, or dataset-derived artifacts.
+No license file is included. Add an appropriate license before redistributing the code, model weights, or dataset-derived artifacts.
